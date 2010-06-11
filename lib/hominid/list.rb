@@ -1,38 +1,38 @@
 module Hominid
   module List
-   
+
     # Get all the lists for this account.
     def lists
       call("lists")
     end
-    
+
     # Find a mailing list by name
     def find_list_by_name(list_name)
       call("lists").find {|list| list["name"] == list_name}
     end
-    
+
     # Find a mailing list ID by name, returns nil if no list found
     def find_list_id_by_name(list_name)
       list = find_list_by_name(list_name)
       list && list["id"]
     end
-    
+
     # Find a mailing list by ID
     def find_list_by_id(list_id)
       call("lists").find {|list| list["id"] == list_id}
     end
-    
+
     # Find a mailing list by web_id
     def find_list_by_web_id(list_web_id)
       call("lists").find {|list| list["web_id"] == list_web_id}
     end
-    
+
     # Find a mailing list ID by web_id, returns nil if no list found
     def find_list_id_by_web_id(list_web_id)
       list = find_list_by_web_id(list_web_id)
       list && list["id"]
     end
-    
+
     # Find all the mailing lists IDs that an email address is subscribed to
     def find_list_ids_by_email(email)
       call("listsForEmail", email)
@@ -53,11 +53,11 @@ module Hominid
     # * email       (String) = The email address that reported abuse.
     # * campaign_id (String) = The unique id for the campaign that report was made against.
     # * type        (String) = An internal type generally specifying the orginating mail provider - may not be useful outside of filling report views.
-    #     
+    #
     def list_abuse_reports(list_id, start = 0, limit = 500, since = "2000-01-01 00:00:00")
       call("listAbuseReports", list_id, start, limit, since)
     end
-    
+
     # Add a single Interest Group - if interest groups for the List are not yet
     # enabled, adding the first group will automatically turn them on.
     #
@@ -72,7 +72,24 @@ module Hominid
       call("listInterestGroupAdd", list_id, group)
     end
     alias :interest_group_add :create_group
-    
+
+    # Add a new Interest Grouping - if interest groups for the List are not yet
+    # enabled, adding the first grouping will automatically turn them on.
+    #
+    # Parameters:
+    # * list_id (String)  = The mailing list ID value.
+    # * name (String) = The interest grouping to add - grouping names must be unique
+    # * type (String) = The type of the grouping to add - one of "checkboxes", "hidden", "dropdown", "radio"
+    # * groups (Array) = The lists of initial group names to be added - at least 1 is required and the names must be unique within a grouping. If the number takes you over the 60 group limit, an error will be thrown.
+    #
+    # Returns:
+    # The new grouping id if the request succeeds, otherwise an error will be thrown.
+    #
+    def create_grouping(list_id, name, type, groups)
+      call("listInterestGroupingAdd", list_id, name, type, groups)
+    end
+    alias :interest_grouping_add :create_grouping
+
     # Add a new merge tag to a given list
     #
     # Parameters:
@@ -88,7 +105,7 @@ module Hominid
       call("listMergeVarAdd", list_id, tag, name, required)
     end
     alias :merge_var_add :create_tag
-    
+
     # Add a new Webhook URL for the given list
     #
     # Parameters:
@@ -114,7 +131,7 @@ module Hominid
       call("listWebhookAdd", list_id, url, actions, sources)
     end
     alias :webhook_add :create_webhook
-    
+
     # Delete a single Interest Group - if the last group for a list
     # is deleted, this will also turn groups for the list off.
     #
@@ -129,6 +146,20 @@ module Hominid
       call("listInterestGroupDel", list_id, group)
     end
     alias :interest_group_del :delete_group
+
+    # Delete an existing Interest Grouping - this will permanently delete
+    # all contained interest groups and will remove those selections from all list members.
+    #
+    # Parameters:
+    # * grouping_id (Int) = The interest grouping id.
+    #
+    # Returns:
+    # True if the request succeeds, otherwise an error will be thrown.
+    #
+    def delete_grouping(grouping_id)
+      call("listInterestGroupingDel", grouping_id)
+    end
+    alias :interest_grouping_del :delete_grouping
 
     # Delete a merge tag from a given list and all its members.
     # Seriously - the data is removed from all members as well!
@@ -146,7 +177,7 @@ module Hominid
       call("listMergeVarDel", list_id, tag)
     end
     alias :merge_var_del :delete_tag
-    
+
     # Delete an existing Webhook URL from a given list.
     #
     # Parameters:
@@ -160,7 +191,7 @@ module Hominid
       call("listWebhookDel", list_id, url)
     end
     alias :webhook_del :delete_webhook
-    
+
     # Get the list of interest groups for a given list, including
     # the label and form information.
     #
@@ -177,7 +208,25 @@ module Hominid
       call("listInterestGroups", list_id)
     end
     alias :interest_groups :groups
-    
+
+    # Get the list of interest groupings for a given list, including
+    # the label, form information, and included groups for each.
+    #
+    # Parameters:
+    # * list_id (String)  = The list id to connect to.
+    #
+    # Returns:
+    # A struct of interest groupings for the list:
+    # * id (String)         = The id for the Grouping
+    # * name (String)       = Name for the Interest groups
+    # * form_field (String) = Gives the type of interest group: checkbox,radio,select
+    # * groups (Array)      = Array of the grouping options including the "bit" value, "name", "display_order", and number of "subscribers" with the option selected.
+    #
+    def groupings(list_id)
+      call("listInterestGroupings", list_id)
+    end
+    alias :interest_groupings :groupings
+
     # Access the Growth History by Month for a given list.
     #
     # Parameters:
@@ -194,7 +243,7 @@ module Hominid
     def growth_history(list_id)
       call("listGrowthHistory", list_id)
     end
-    
+
     # Get all the information for a particular member of a list.
     #
     # Parameters:
@@ -217,9 +266,9 @@ module Hominid
     def member_info(list_id, email)
       call("listMemberInfo", list_id, email)
     end
-    
+
     # Get all of the list members for a list that are of a particular status.
-    # 
+    #
     # Parameters:
     # * list_id (String)    = The mailing list ID value.
     # * status  (String)    = One of subscribed, unsubscribed, cleaned, updated.
@@ -235,7 +284,7 @@ module Hominid
     def members(list_id, status = "subscribed", since = "2000-01-01 00:00:00", start = 0, limit = 100)
       call("listMembers", list_id, status, since, start, limit)
     end
-    
+
     # Get the list of merge tags for a given list, including their name, tag, and required setting.
     #
     # Parameters:
@@ -250,7 +299,7 @@ module Hominid
       call("listMergeVars", list_id)
     end
     alias :merge_vars :merge_tags
-    
+
     # Allows one to test their segmentation rules before creating a campaign using them.
     #
     # Parameters:
@@ -263,9 +312,9 @@ module Hominid
     def segment_test(list_id, options = {})
       call("campaignSegmentTest", list_id, options)
     end
-    
+
     # Subscribe the provided email to a list.
-    # 
+    #
     # Parameters:
     # * list_id     (String) = The mailing list ID value.
     # * email       (String) = The email address to subscribe.
@@ -291,9 +340,9 @@ module Hominid
         )
       )
     end
-    
+
     # Subscribe a batch of email addresses to a list at once.
-    # 
+    #
     # Parameters:
     # * list_id     (String)  = The mailing list ID value.
     # * subscribers (Array)   = An array of email addresses to subscribe.
@@ -311,7 +360,7 @@ module Hominid
       call("listBatchSubscribe", list_id, subscribers, *options.values_at(:double_opt_in, :update_existing, :replace_interests))
     end
     alias :batch_subscribe :subscribe_many
-    
+
     # Unsubscribe the given email address from the list.
     #
     # Parameters:
@@ -329,7 +378,7 @@ module Hominid
       options = apply_defaults_to({:delete_member => true}.merge(options))
       call("listUnsubscribe", list_id, current_email, *options.values_at(:delete_member, :send_goodbye, :send_notify))
     end
-    
+
     # Unsubscribe a batch of email addresses to a list.
     #
     # Parameters:
@@ -347,7 +396,7 @@ module Hominid
       call("listBatchUnsubscribe", list_id, emails, *options.values_at(:delete_member, :send_goodbye, :send_notify))
     end
     alias :batch_unsubscribe :unsubscribe_many
-    
+
     # Change the name of an Interest Group.
     #
     # Parameters:
@@ -361,7 +410,18 @@ module Hominid
     def update_group(list_id, old_name, new_name)
       call("listInterestGroupUpdate", list_id, old_name, new_name)
     end
-    
+
+    # Update an existing Interest Grouping.
+    #
+    # Parameters:
+    # * grouping_id (Int)    = The interest grouping ID.
+    # * name        (String) = The name of the field to update - either "name" or "type".
+    # * value       (String) = The new value of the field.
+    #
+    def update_grouping(grouping_id, name, value)
+      call("listInterestGroupingUpdate", grouping_id, name, value)
+    end
+
     # Edit the email address, merge fields, and interest groups for a list member.
     #
     # Parameters:
@@ -377,7 +437,7 @@ module Hominid
     def update_member(list_id, email, merge_tags = {}, email_type = "html", replace_interests = true)
       call("listUpdateMember", list_id, email, merge_tags, email_type, replace_interests)
     end
-    
+
     # Return the Webhooks configured for the given list.
     #
     # Parameters:
@@ -392,6 +452,6 @@ module Hominid
     def webhooks(list_id)
       call("listWebhooks", list_id)
     end
-    
+
   end
 end
